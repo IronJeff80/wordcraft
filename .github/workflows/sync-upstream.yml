@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Checkout Fork
         uses: actions/checkout@v4
@@ -19,3 +20,13 @@ jobs:
           GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
         run: |
           gh repo sync ${{ github.repository }} --branch main
+
+      - name: Disable Upstream Workflows
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          # Find all workflows in the repository except this sync file
+          gh workflow list -R ${{ github.repository }} --json id,path -q '.[] | select(.path != ".github/workflows/sync-upstream.yml") | .id' | while read -r id; do
+            echo "Disabling workflow ID: $id"
+            gh workflow disable "$id" -R ${{ github.repository }} || true
+          done
